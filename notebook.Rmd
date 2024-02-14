@@ -2,6 +2,7 @@
 title: "Credit card default prediction"
 output: html_notebook
 ---
+
 # Credit Card Default Prediction
 
 Project: Predict whether a customer will default on their credit card
