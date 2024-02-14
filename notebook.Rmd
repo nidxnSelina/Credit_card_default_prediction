@@ -1,0 +1,17 @@
+---
+title: "Credit card default prediction"
+output: html_notebook
+---
+# Credit Card Default Prediction
+
+Project: Predict whether a customer will default on their credit card based on 
+Feb.13th 2024
+Selina Wang, Eileen Hu, Alex Huang, Jeffrey Wu, Ziao Xiong
+
+Dataset: https://www.kaggle.com/datasets/uciml/default-of-credit-card-clients-dataset?resource=download
+
+Problem description:
+
+Data description:
+
+Objective: 
