@@ -295,6 +295,8 @@ qdaER
 library(tree)
 
 tree.ccard = tree(IsDefaulter~., ccard.train)
+plot(tree.ccard)
+text(tree.ccard, pretty=0)
 
 tree.pred = predict(tree.ccard, ccard.test, type="class")
 
@@ -305,7 +307,7 @@ treeER
 
 
 4.5. Bagging
-# use CV???????????????
+# probably overfitted, use CV
 ```{r}
 # Tuning the hyperparameter ntree
 
@@ -331,6 +333,7 @@ baggingER = testER[4] # hard coding?????????
 
 
 4.6. Random Forest
+# probably overfitted, use CV
 
 Tune the hyperparameter mtry
 ```{r}
@@ -432,9 +435,11 @@ library(xgboost)
 ccard.train <- lapply(ccard.train, function(x) if(is.factor(x)) as.numeric(x) else x)
 
 # Prepare the data
-x_train <- as.matrix(subset(ccard.train, select = -c(IsDefaulter)))
+x_train <- ccard.train[, -which(names(ccard.train) == "IsDefaulter")]
+x_train <- as.matrix(x_train)
 y_train = ccard.train$IsDefaulter
-x_test <- as.matrix(subset(ccard.test, select = -c(IsDefaulter)))
+x_test <- ccard.test[, -which(names(ccard.test) == "IsDefaulter")]
+x_test <- as.matrix(x_test)
 y_test = ccard.test$IsDefaulter
 
 # Train the boosted tree model
@@ -453,6 +458,39 @@ predicted_labels <- ifelse(predictions > 0.5, 1, 0)
 accuracy <- mean(predicted_labels == ccard.test$IsDefaulter)
 print(paste("Accuracy:", accuracy))
 ```
+
+```{r}
+install.packages("catboost")
+library(catboost)
+
+# Set parameters
+iterations <- 500
+learning_rate <- 0.02
+depth <- 12
+eval_metric <- "AUC"
+random_seed <- 42 # Assuming RANDOM_STATE is defined as 42
+bagging_temperature <- 0.2
+od_type <- "Iter"
+metric_period <- 1 # Assuming VERBOSE_EVAL is defined as 1
+od_wait <- 100
+
+# Create CatBoost classifier object
+clf <- catboost.train(
+  data = as.matrix(train_df[, predictors]), 
+  label = train_df[, target], 
+  verbose = TRUE,
+  iterations = iterations,
+  learning_rate = learning_rate,
+  depth = depth,
+  eval_metric = eval_metric,
+  bagging_temperature = bagging_temperature,
+  od_type = od_type,
+  metric_period = metric_period,
+  od_wait = od_wait,
+  verbose_eval = TRUE
+)
+```
+
 
 
 4.8. Neural Network 
@@ -519,7 +557,12 @@ mean(nn.pred == ccard.test$IsDefaulter)
 # need Boosted tree and Neural network
 models = c("Logistic Regression", "LDA", "QDA", "Tree", "Bagging", "Random Forest")
 errorRates = c(logiER, ldaER, qdaER, treeER, baggingER, rfER)
-plot(models, errorRates)
+barplot(errorRates, names.arg = models, col = "steelblue", main = "Error Rates (log) by Model",
+        xlab = "Model", ylab = "Error Rate (log)", log = "y", las=3)
+
+errorRates
 ```
 
 6. Conclusion
+
+
