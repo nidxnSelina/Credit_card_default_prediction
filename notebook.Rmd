@@ -14,7 +14,9 @@ Selina Wang, Eileen Hu, Alex Huang, Jeffrey Wu, Ziao Xiong
 1.1 Problem description and Objective
 (literature review qfehwgrjbkfndlwjaofihgdui)
 
-The goal of this project is to predict whether or not a customer will default on a credit card payment due next month, given a collection of client records in Taiwan, including customer demographics, history of payment, and the case of default payment.
+The goal of this project is to predict whether or not a customer will default on a credit card payment due next month. more context awhgrukfeljdoak
+
+Given a collection of client records in Taiwan, including customer demographics, history of payment, and the case of default payment.
 
 1.2 Data description
 The dataset is acquired from Kaggle: https://www.kaggle.com/datasets/uciml/default-of-credit-card-clients-dataset?resource=download
@@ -24,8 +26,8 @@ This dataset contains information on default payments, demographic factors, hist
 - ID: ID of each client
 - LIMIT_BAL: Amount of given credit in NT dollars (includes individual and family/supplementary credit)
 - SEX: Gender (1=male, 2=female)
-- EDUCATION: (1=graduate school, 2=university, 3=high school, 4=others, 5=unknown, 6=unknown)
-- MARRIAGE: Marital status (1=married, 2=single, 3=others)
+- EDUCATION: (0=others, 1=graduate school, 2=university, 3=high school, 4=others, 5=unknown, 6=unknown)
+- MARRIAGE: Marital status (0=others, 1=married, 2=single, 3=others)
 - AGE: Age in years
 Scale of PAY_0, PAY_2, PAY_3, PAY_4, PAY_5, and PAY_6: -2 = no consumption, -1 = paid in full, 0 = use of revolving credit (paid minimum only), 1 = payment delay for one month, 2 = payment delay for two months, …, 8 = payment delay for eight months, 9 = payment delay for nine months and above
 - PAY_0: Repayment status in September, 2005 
@@ -62,8 +64,8 @@ Explore the numerical variables: LIMIT_BAL and AGE
 ```{r}
 par(mfrow=c(1,2))
 
-boxplot(LIMIT_BAL~default.payment.next.month, xlab = "Defaulter")
-boxplot(AGE~default.payment.next.month, xlab = "Defaulter")
+boxplot(LIMIT_BAL~default.payment.next.month, xlab = "Defaulter", col = "steelblue")
+boxplot(AGE~default.payment.next.month, xlab = "Defaulter", col = "steelblue")
 
 par(mfrow=c(1,1))
 ```
@@ -73,7 +75,8 @@ Explore the categorical variables: SEX, EDUCATION, MARRIAGE
 library(ggplot2)
 library(dplyr)
 
-ccard_cat <- ccard[c('SEX', 'EDUCATION', 'MARRIAGE')]
+categorical_features <- c('SEX', 'EDUCATION', 'MARRIAGE')
+ccard_cat <- ccard[categorical_features]
 ccard_cat$Defaulter <- ccard$default.payment.next.month
 
 # Replace values with labels
@@ -121,68 +124,106 @@ PAY_AMT = c("PAY_AMT1", "PAY_AMT2", "PAY_AMT3", "PAY_AMT4", "PAY_AMT5", "PAY_AMT
 pairs(ccard[PAY_AMT])
 ```
 
+Check the correlation between variables
+```{r}
+library(corrplot)
+
+data <- ccard
+correlation_matrix <- cor(data)
+corrplot(correlation_matrix)
+```
+As shown by the plot, the BILL_AMT variables are highly correlated. And, the closer the two months, the more correlated the payment status variables (i.e. PAY_2 and PAY_3). Therefore, in predictive analysis, we are going to use a new predictor to represent the BILL_AMT variables instead of including all of them in the model. Also, we're going to perform the tree models (classification trees, bagging, random forest, boosted trees) to identify the most importance payment status feature before performing logistic regression, LDA, and QDA.
+
 Explore the target variable default.payment.next.month
 ```{r}
 freq <- table(default.payment.next.month)
 barplot(freq, col = "steelblue", main = "Target Variable Distribution", ylim=c(0,30000), xlab = "Defaulter", ylab = "Frequency")
 ```
 
+
 3. Feature Engineering
 
 Rename the variables
 ```{r}
-column_names <- list(
-  PAY_0 = "PAY_SEPT", PAY_2 = "PAY_AUG", PAY_3 = "PAY_JUL", PAY_4 = "PAY_JUN", PAY_5 = "PAY_MAY", PAY_6 = "PAY_APR", BILL_AMT1 = "BILL_AMT_SEPT", BILL_AMT2 = "BILL_AMT_AUG", BILL_AMT3 = "BILL_AMT_JUL", BILL_AMT4 = "BILL_AMT_JUN", BILL_AMT5 = "BILL_AMT_MAY", BILL_AMT6 = "BILL_AMT_APR", PAY_AMT1 = "PAY_AMT_SEPT", PAY_AMT2 = "PAY_AMT_AUG", PAY_AMT3 = "PAY_AMT_JUL", PAY_AMT4 = "PAY_AMT_JUN", PAY_AMT5 = "PAY_AMT_MAY", PAY_AMT6 = "PAY_AMT_APR",default.payment.next.month="IsDefaulter"
+column_names <- list(PAY_0 = "PAY_SEPT", PAY_2 = "PAY_AUG", PAY_3 = "PAY_JUL", PAY_4 = "PAY_JUN", PAY_5 = "PAY_MAY", PAY_6 = "PAY_APR", BILL_AMT1 = "BILL_AMT_SEPT", BILL_AMT2 = "BILL_AMT_AUG", BILL_AMT3 = "BILL_AMT_JUL", BILL_AMT4 = "BILL_AMT_JUN", BILL_AMT5 = "BILL_AMT_MAY", BILL_AMT6 = "BILL_AMT_APR", PAY_AMT1 = "PAY_AMT_SEPT", PAY_AMT2 = "PAY_AMT_AUG", PAY_AMT3 = "PAY_AMT_JUL", PAY_AMT4 = "PAY_AMT_JUN", PAY_AMT5 = "PAY_AMT_MAY", PAY_AMT6 = "PAY_AMT_APR", default.payment.next.month = "IsDefaulter"
 )
 
 for (old_name in names(column_names)) {
   new_name <- column_names[[old_name]]
-  names(my_data)[names(my_data) == old_name] <- new_name
+  names(ccard)[names(ccard) == old_name] <- new_name
 }
 
-names(my_data)
+names(ccard)
 ```
 
-Encoding categorical variables using one-hot encoding
+Combine and Delete features
 ```{r}
+ccard1 = ccard
+attach(ccard1)
 
+# Combine EDUCATION = 0, 4 or 5 to 4
+ccard1$EDUCATION = ifelse(ccard1$EDUCATION==0 | ccard1$EDUCATION==4 | ccard1$EDUCATION==5 |ccard1$EDUCATION==6, 4, ccard1$EDUCATION)
+
+# Combine MARRIAGE = 0, 3 to 3
+ccard1$MARRIAGE = ifelse(ccard1$MARRIAGE==0 | ccard1$MARRIAGE==3, 3, ccard1$MARRIAGE)
+
+# Combine PAY_month = 4, 5, 6, 7, 8 to 4 for every month
+ccard1$PAY_SEPT = ifelse(ccard1$PAY_SEPT==4 | ccard1$PAY_SEPT==5 |ccard1$PAY_SEPT==6 | ccard1$PAY_SEPT==7 | ccard1$PAY_SEPT==8, 4, ccard1$PAY_SEPT)
+ccard1$PAY_AUG = ifelse(ccard1$PAY_AUG==4 | ccard1$PAY_AUG==5 |ccard1$PAY_AUG==6 | ccard1$PAY_AUG==7 | ccard1$PAY_AUG==8, 4, ccard1$PAY_AUG)
+ccard1$PAY_JUL = ifelse(ccard1$PAY_JUL==4 | ccard1$PAY_JUL==5 |ccard1$PAY_JUL==6 | ccard1$PAY_JUL==7 | ccard1$PAY_JUL==8, 4, ccard1$PAY_JUL)
+ccard1$PAY_JUN = ifelse(ccard1$PAY_JUN==4 | ccard1$PAY_JUN==5 |ccard1$PAY_JUN==6 | ccard1$PAY_JUN==7 | ccard1$PAY_JUN==8, 4, ccard1$PAY_JUN)
+ccard1$PAY_MAY = ifelse(ccard1$PAY_MAY==4 | ccard1$PAY_MAY==5 |ccard1$PAY_MAY==6 | ccard1$PAY_MAY==7 | ccard1$PAY_MAY==8, 4, ccard1$PAY_MAY)
+ccard1$PAY_APR = ifelse(ccard1$PAY_APR==4 | ccard1$PAY_APR==5 |ccard1$PAY_APR==6 | ccard1$PAY_APR==7 | ccard1$PAY_APR==8, 4, ccard1$PAY_APR)
+
+# Delete PAY_AUG, PAY_JUL, PAY_JUN = 1 data # not sure???????????
+ccard1 = subset(ccard1, !(PAY_AUG == 1 | PAY_JUL == 1 | PAY_JUN == 1))
+
+# Delete irrelevant variable ID
+ccard1 = subset(ccard1, select = -c(ID))
+```
+
+Convert categorical variables from int to factor
+```{r}
+categorical_vars <- c("SEX","EDUCATION","MARRIAGE","PAY_SEPT","PAY_AUG", "PAY_JUL", "PAY_JUN", "PAY_MAY", "PAY_APR", "IsDefaulter")
+ccard1[categorical_vars] = lapply(ccard1[categorical_vars], as.factor)
+str(ccard1)
+```
+
+Create a new variable AVG_BILL_AMT to replace highly correlated BILL_AMT features
+```{r}
+attach(ccard1)
+ccard1$AVG_BILL_AMT = 1/6 * (BILL_AMT_SEPT + BILL_AMT_AUG + BILL_AMT_JUL + BILL_AMT_JUN + BILL_AMT_MAY + BILL_AMT_APR)
+ccard1 = subset(ccard1, select = -c(BILL_AMT_SEPT, BILL_AMT_AUG, BILL_AMT_JUL, BILL_AMT_JUN, BILL_AMT_MAY, BILL_AMT_APR))
+names(ccard1)
 ```
 
 Handle missing data
 ```{r}
-my_data = na.omit(my_data)
-dim(my_data)
+dim(ccard1)
+ccard1 = na.omit(ccard1)
+dim(ccard1)
 ```
 
 Handle outliers
 ```{r}
-##Use 3 sigma method to remove outliers
+# 3 sigma method
 
-#Only remove outliers in numerical variables
-numeric_cols <- sapply(my_data, is.numeric)
+numeric_cols = sapply(ccard1, is.numeric)
 
-valid_rows <- rep(TRUE, nrow(my_data))
+valid_rows <- rep(TRUE, nrow(ccard1))
 
-for (i in which(numeric_cols)) {  
-  print(i)
-  mean_col <- mean(my_data[, i])  
-  sd_col <- sd(my_data[, i])    
+for (i in which(numeric_cols)) {
+  mean_col <- mean(ccard1[, i])  
+  sd_col <- sd(ccard1[, i])    
   lower_bound <- mean_col - 3 * sd_col
   upper_bound <- mean_col + 3 * sd_col
   # update valid_rows based on 3 sigma bound
-  valid_rows <- valid_rows & (my_data[, i] >= lower_bound & my_data[, i] <= upper_bound)
+  valid_rows <- valid_rows & (ccard1[, i] >= lower_bound & ccard1[, i] <= upper_bound)
 }
 
-    
-data = my_data[valid_rows,]
+ccard2 = ccard1[valid_rows,]
 
-dim(data)
-
-```
-
-Create new variables
-```{r}
-
+dim(ccard2)
 ```
 
 Perform clustering
@@ -195,15 +236,290 @@ The following models are aimed at predicting the IsDefaulter variable using the 
 
 4. Predictive Analysis
 
+Perform train-test split
+```{r}
+set.seed(1)
+
+train = sample(nrow(ccard2), nrow(ccard2)*0.7, replace = FALSE)
+ccard.train = ccard2[train,]
+ccard.test = ccard2[-train,]
+```
+
+
 4.1 Logistic Regression
+```{r}
+glm.fit = glm(IsDefaulter~., data = ccard.train, family = binomial)
+
+glm.probs = predict(glm.fit, ccard.test, type = "response")
+
+glm.pred = rep(0, nrow(ccard.test))
+threshold = 0.5
+glm.pred[glm.probs > threshold] = 1
+
+table(glm.pred, ccard.test$IsDefaulter)
+logiER = mean(glm.pred != ccard.test$IsDefaulter)
+logiER
+```
+
+
 4.2. LDA
+```{r}
+library(MASS)
+
+lda.fit = lda(IsDefaulter~., data = ccard.train)
+
+lda.pred = predict(lda.fit, ccard.test)
+lda.class = lda.pred$class
+
+table(lda.class, ccard.test$IsDefaulter)
+ldaER = mean(lda.class != ccard.test$IsDefaulter)
+ldaER
+```
+
+
 4.3. QDA
+```{r}
+qda.fit = qda(IsDefaulter~., data = ccard.train)
+
+qda.pred = predict(qda.fit, ccard.test)
+qda.class = qda.pred$class
+
+table(qda.class, ccard.test$IsDefaulter)
+qdaER = mean(qda.class != ccard.test$IsDefaulter)
+qdaER
+```
+
+
 4.4. Classification Tree
+```{r}
+library(tree)
+
+tree.ccard = tree(IsDefaulter~., ccard.train)
+
+tree.pred = predict(tree.ccard, ccard.test, type="class")
+
+table(tree.pred, ccard.test$IsDefaulter)
+treeER = mean(tree.pred != ccard.test$IsDefaulter)
+treeER
+```
+
+
 4.5. Bagging
+# use CV???????????????
+```{r}
+# Tuning the hyperparameter ntree
+
+library(randomForest)
+set.seed(1)
+
+testER = c()
+ntreeList = seq(250,500,50)
+for (ntree in ntreeList) {
+  bag.ccard = randomForest(IsDefaulter~., data = ccard.train, mtry = ncol(ccard.train)-1, ntree = ntree, importance=FALSE)
+  bag.pred = predict(bag.ccard, ccard.test)
+  print(mean(bag.pred != ccard.test$IsDefaulter))
+  testER = append(testER, mean(bag.pred != ccard.test$IsDefaulter))
+}
+
+plot(ntreeList, testER)
+```
+
+```{r}
+bestntree = 400
+baggingER = testER[4] # hard coding?????????
+```
+
+
 4.6. Random Forest
+
+Tune the hyperparameter mtry
+```{r}
+# usually mtry = sqrt(numPredictors) gives the best performance
+
+set.seed(1)
+testER = c()
+mtryList = seq(2,6,1)
+for (mtry in mtryList) {
+  rf.ccard = randomForest(IsDefaulter~., data = ccard.train, mtry = mtry, ntree = bestntree, importance=FALSE)
+  rf.pred = predict(rf.ccard, ccard.test)
+  print(mean(rf.pred != ccard.test$IsDefaulter))
+  testER = append(testER, mean(rf.pred != ccard.test$IsDefaulter))
+}
+plot(mtryList, testER)
+```
+
+```{r}
+bestmtry = 4
+rfER = testER[3]
+```
+
+Tune the hyperparameter ntree
+```{r}
+set.seed(1)
+testER = c()
+ntreeList = seq(250,500,50)
+for (ntree in ntreeList) {
+  rf.ccard = randomForest(IsDefaulter~., data = ccard.train, mtry = bestmtry, ntree = ntree, importance=FALSE)
+  rf.pred = predict(rf.ccard, ccard.test)
+  print(mean(rf.pred != ccard.test$IsDefaulter))
+  testER = append(testER, mean(rf.pred != ccard.test$IsDefaulter))
+}
+plot(ntreeList, testER)
+```
+
+```{r}
+bestntree = 400
+rfER = testER[4]
+```
+
+Build the best model, and show the importance of predictors
+```{r}
+set.seed(1)
+rf.ccard = randomForest(IsDefaulter~., data = ccard.train, mtry = bestmtry, ntree = bestntree, importance=FALSE)
+rf.pred = predict(rf.ccard, ccard.test)
+rfER = mean(rf.pred != ccard.test$IsDefaulter)
+rfER
+  
+varImpPlot(rf.ccard)
+
+sorted_indices = order(importance(rf.ccard)[,1], decreasing = TRUE)
+importance(rf.ccard)[sorted_indices, ]
+```
+
+
 4.7. Boosted Trees
+```{r}
+# Tuning shrinkage
+library(gbm)
+
+set.seed(1)
+threshold = 0.5
+testER = c()
+shrinkageList = seq(0.05,0.30,0.05)
+for (shrinkage in shrinkageList) {
+  boost.ccard = gbm(IsDefaulter~., data = ccard.train, distribution = "bernoulli", n.trees = 10, interaction.depth=4, shrinkage = shrinkage)
+
+  boost.probs = predict(boost.ccard, newdata = ccard.test, n.trees = 10)
+  boost.pred = ifelse(boost.probs > threshold, 1, 0)
+  
+  table(boost.pred, ccard.test$IsDefaulter)
+  mean(boost.pred == ccard.test$IsDefaulter)
+}
+plot(ntreeList, testER)
+
+
+
+boost.ccard = gbm(IsDefaulter~., data = ccard.train, distribution = "bernoulli", n.trees=1000, interaction.depth=4, shrinkage = 0.1)
+
+boost.probs = predict(boost.ccard, newdata = ccard.test, n.trees = 1000)
+threshold = 0.5
+boost.pred = ifelse(boost.probs > threshold, 1, 0)
+
+table(boost.pred, ccard.test$IsDefaulter)
+mean(boost.pred == ccard.test$IsDefaulter)
+```
+
+```{r}
+# Tuning interaction.depth
+
+
+```
+
+
+```{r}
+library(xgboost)
+
+ccard.train <- lapply(ccard.train, function(x) if(is.factor(x)) as.numeric(x) else x)
+
+# Prepare the data
+x_train <- as.matrix(subset(ccard.train, select = -c(IsDefaulter)))
+y_train = ccard.train$IsDefaulter
+x_test <- as.matrix(subset(ccard.test, select = -c(IsDefaulter)))
+y_test = ccard.test$IsDefaulter
+
+# Train the boosted tree model
+dtrain <- xgb.DMatrix(data = as.matrix(x_train), label = y_train)
+params <- list(objective = "binary:logistic")
+boost_model <- xgboost(params = params, data = dtrain, nrounds = 10)
+
+# Make predictions on the test dataset
+dtest = xgb.DMatrix(data = as.matrix(X_test))
+predictions <- predict(boost_model, newdata = dtest)
+
+# Convert predicted probabilities to class labels (0 or 1)
+predicted_labels <- ifelse(predictions > 0.5, 1, 0)
+
+# Evaluate the predictions (e.g., calculate accuracy)
+accuracy <- mean(predicted_labels == ccard.test$IsDefaulter)
+print(paste("Accuracy:", accuracy))
+```
+
+
 4.8. Neural Network 
 
+One-hot encoding categorical variables
+```{r}
+library(fastDummies)
+
+ccard3 = ccard2
+categorical_preds <- c("SEX","EDUCATION","MARRIAGE","PAY_SEPT","PAY_AUG", "PAY_JUL", "PAY_JUN", "PAY_MAY", "PAY_APR")
+ccard3 = dummy_cols(ccard2, select_columns = categorical_preds)
+ccard3 = ccard3[, !colnames(ccard3) %in% categorical_preds]
+colnames(ccard3) = make.names(colnames(ccard3)) # make valid names
+ccard3[which(colnames(ccard3) == "SEX_1"):ncol(ccard3)] = lapply(ccard3[which(colnames(ccard3) == "SEX_1"):ncol(ccard3)], as.factor) # convert dummies to factor
+
+str(ccard3)
+```
+
+Pre-processing the dataset
+```{r}
+#remove.packages("caret")
+#remove.packages("timechange")
+#install.packages("timechange")
+#install.packages("caret", dependencies = TRUE)
+library(caret)
+
+#str(ccard3)
+
+new_ccard <- preProcess(ccard3, method = "range", rangeBounds = c(0,1))
+str(new_ccard)
+
+```
+
+Perform train-test split
+```{r}
+set.seed(1)
+
+train = sample(nrow(ccard3), nrow(ccard3)*0.7, replace = FALSE)
+ccard.train = ccard3[train,]
+ccard.test = ccard3[-train,]
+```
+
+
+```{r}
+library(neuralnet)
+
+nn.ccard = neuralnet(IsDefaulter~., data = ccard.train, linear.output = F, hidden = 5)
+# build a neural network model, linear.output = F: classification model
+# hidden = c(4,3): 2 hidden layers with 4 nodes and 3 nodes
+
+summary(nn.ccard)
+plot(nn.ccard, rep="best")
+# display the neural networks
+
+nn.pred = predict(nn.ccard, ccard.test)
+
+mean(nn.pred == ccard.test$IsDefaulter)
+```
+
+
 5. Model Evaluations
+
+```{r}
+# need Boosted tree and Neural network
+models = c("Logistic Regression", "LDA", "QDA", "Tree", "Bagging", "Random Forest")
+errorRates = c(logiER, ldaER, qdaER, treeER, baggingER, rfER)
+plot(models, errorRates)
+```
 
 6. Conclusion

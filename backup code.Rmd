@@ -1,0 +1,99 @@
+---
+title: "backup code"
+output: html_notebook
+---
+
+4.1 Logistic regression
+
+# nooooooo, redo this with only important variables
+```{r}
+# Use LASSO in logistic regression to find the best collection of predictors
+# Use cross validation to tune lambda in LASSO
+
+set.seed(1)
+library(glmnet)
+library(Matrix)
+
+x = model.matrix(IsDefaulter~.,ccard2)[,-1]
+y = ccard2$IsDefaulter
+
+grid = 10^seq(10,-2,length=100)
+
+cv.out = cv.glmnet(x[train,], y[train], alpha = 1, family = "binomial")
+bestlam = cv.out$lambda.min
+```
+
+```{r}
+glm.fit = glmnet(x[train,], y[train], alpha = 1, lambda = grid, thresh = 1e-12, family = "binomial")
+
+glm.probs = predict(glm.fit, s = bestlam, x = x[train,], y = y[train], newx = x[-train,], exact = T)
+
+glm.pred = rep(0, nrow(x[-train,]))
+threshold = 0.5
+glm.pred[glm.probs > threshold] = 1
+
+table(glm.pred, y[-train])
+
+mean(glm.pred == y[-train])
+```
+
+
+
+
+
+
+Delete irrelevant features: ID, PAY_AUG_1, PAY_JUL_1, PAY_JUN_1
+```{r}
+ccard1 = subset(ccard1, select = -c(ID))
+ccard2 = subset(ccard1, select = -c(PAY_AUG_1, PAY_JUL_1, PAY_JUN_1))
+names(ccard2)
+```
+
+Combine features
+```{r}
+## DON'T RUN THIS AGAIN!!!
+#summary(ccard2)
+attach(ccard2)
+
+# Combine EDUCATION_0, EDUCATION_4, EDUCATION_5, and EDUCATION_6 because they all refer to others or unknown education background
+ccard2$EDUCATION_4 = ifelse(EDUCATION_0==1 | EDUCATION_4==1 | EDUCATION_5==1 | EDUCATION_6==1, 1, 0)
+ccard2$EDUCATION_4 = as.factor(ccard2$EDUCATION_4)
+ccard2 = subset(ccard2, select = -c(EDUCATION_0, EDUCATION_5, EDUCATION_6))
+
+# Combine MARRIAGE_0 with MARRIAGE_3 because they both refer to marriage status other than married or unmarried
+ccard2$MARRIAGE_3 = ifelse(MARRIAGE_0==1 | MARRIAGE_3==1, 1, 0)
+ccard2$MARRIAGE_3 = as.factor(ccard2$MARRIAGE_3)
+ccard2 = subset(ccard2, select = -c(MARRIAGE_0))
+
+# Combine PAY_4, PAY_5, PAY_6, PAY_7, PAY_8 for all months because they all have low "1" counts
+ccard2$PAY_SEPT_4 = ifelse(PAY_SEPT_4==1 | PAY_SEPT_5==1 | PAY_SEPT_6==1 | PAY_SEPT_7==1 | PAY_SEPT_8==1, 1, 0)
+ccard2$PAY_SEPT_4 = as.factor(ccard2$PAY_SEPT_4)
+ccard2 = subset(ccard2, select = -c(PAY_SEPT_5, PAY_SEPT_6, PAY_SEPT_7, PAY_SEPT_8))
+
+ccard2$PAY_AUG_4 = ifelse(PAY_AUG_4==1 | PAY_AUG_5==1 | PAY_AUG_6==1 | PAY_AUG_7==1 | PAY_AUG_8==1, 1, 0)
+ccard2$PAY_AUG_4 = as.factor(ccard2$PAY_AUG_4)
+ccard2 = subset(ccard2, select = -c(PAY_AUG_5, PAY_AUG_6, PAY_AUG_7, PAY_AUG_8))
+
+ccard2$PAY_JUL_4 = ifelse(PAY_JUL_4==1 | PAY_JUL_5==1 | PAY_JUL_6==1 | PAY_JUL_7==1 | PAY_JUL_8==1, 1, 0)
+ccard2$PAY_JUL_4 = as.factor(ccard2$PAY_JUL_4)
+ccard2 = subset(ccard2, select = -c(PAY_JUL_5, PAY_JUL_6, PAY_JUL_7, PAY_JUL_8))
+
+ccard2$PAY_JUN_4 = ifelse(PAY_JUN_4==1 | PAY_JUN_5==1 | PAY_JUN_6==1 | PAY_JUN_7==1 | PAY_JUN_8==1, 1, 0)
+ccard2$PAY_JUN_4 = as.factor(ccard2$PAY_JUN_4)
+ccard2 = subset(ccard2, select = -c(PAY_JUN_5, PAY_JUN_6, PAY_JUN_7, PAY_JUN_8))
+
+ccard2$PAY_MAY_4 = ifelse(PAY_MAY_4==1 | PAY_MAY_5==1 | PAY_MAY_6==1 | PAY_MAY_7==1 | PAY_MAY_8==1, 1, 0)
+ccard2$PAY_MAY_4 = as.factor(ccard2$PAY_MAY_4)
+ccard2 = subset(ccard2, select = -c(PAY_MAY_5, PAY_MAY_6, PAY_MAY_7, PAY_MAY_8))
+
+ccard2$PAY_APR_4 = ifelse(PAY_APR_4==1 | PAY_APR_5==1 | PAY_APR_6==1 | PAY_APR_7==1 | PAY_APR_8==1, 1, 0)
+ccard2$PAY_APR_4 = as.factor(ccard2$PAY_APR_4)
+ccard2 = subset(ccard2, select = -c(PAY_APR_5, PAY_APR_6, PAY_APR_7, PAY_APR_8))
+
+summary(ccard2)
+```
+
+
+As shown by the plot, PAY_SEPT variables are the most important predictors among the PAY_month variables, which are highly correlated with each other. Therefore, we are going to perform logistic regression, LDA, and QDA with the PAY_SEPT variables, along with AVG_BLL_AMT, AGE, LIMIT_BAL, PAY_AMT variables, SEX, MARRIAGE, EDUCATION.
+
+
