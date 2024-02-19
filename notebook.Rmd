@@ -7,7 +7,6 @@ output: html_notebook
 
 Project: Predict whether a customer will default on their credit card
 Feb.13th 2024
-Selina Wang, Eileen Hu, Alex Huang, Jeffrey Wu, Ziao Xiong
 
 1. Introduction
 
@@ -175,7 +174,7 @@ ccard1$PAY_JUN = ifelse(ccard1$PAY_JUN==4 | ccard1$PAY_JUN==5 |ccard1$PAY_JUN==6
 ccard1$PAY_MAY = ifelse(ccard1$PAY_MAY==4 | ccard1$PAY_MAY==5 |ccard1$PAY_MAY==6 | ccard1$PAY_MAY==7 | ccard1$PAY_MAY==8, 4, ccard1$PAY_MAY)
 ccard1$PAY_APR = ifelse(ccard1$PAY_APR==4 | ccard1$PAY_APR==5 |ccard1$PAY_APR==6 | ccard1$PAY_APR==7 | ccard1$PAY_APR==8, 4, ccard1$PAY_APR)
 
-# Delete PAY_AUG, PAY_JUL, PAY_JUN = 1 data # not sure???????????
+# Delete PAY_AUG, PAY_JUL, PAY_JUN = 1 data #not sure???????????
 ccard1 = subset(ccard1, !(PAY_AUG == 1 | PAY_JUL == 1 | PAY_JUN == 1))
 
 # Delete irrelevant variable ID
