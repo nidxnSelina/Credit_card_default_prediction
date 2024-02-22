@@ -3,30 +3,46 @@ title: "Credit card default prediction"
 output: html_notebook
 ---
 
-# Credit Card Default Prediction
-
-Project: Predict whether a customer will default on their credit card
+# Project: Credit Card Default Prediction
 Feb.13th 2024
+Chenbo Huang, Jiayi Wu, Selina Wang, Yiting Hu, Ziao Xiong
 
+Content
 1. Introduction
+  1.1 Problem description
+  1.2 Literature review
+  1.3 Data description
+2. Exploratory Data Analysis
+3. Feature Engineering
+4. Predictive Analysis
+  4.1. Logistic Regression
+  4.2. LDA
+  4.3. QDA
+  4.4. Classification Tree
+  4.5. Bagging
+  4.6. Random Forest
+  4.7. Boosted Trees
+  4.8. Neural Network 
+5. Model Evaluation
+6. Conclusion
 
-1.1 Problem description and Objective
-(literature review qfehwgrjbkfndlwjaofihgdui)
+# 1. Introduction
 
-The goal of this project is to predict whether or not a customer will default on a credit card payment due next month. more context awhgrukfeljdoak
+1.1 Problem description
+Predicting whether a client will default on their credit card payment has been a significant part of risk assessment for credit card companies. In our project, we used 8 models to predict the case of default based on a collection of demographic, repayment status and amount records of clients in Taiwan from April to September 2005.
 
-Given a collection of client records in Taiwan, including customer demographics, history of payment, and the case of default payment.
+1.2 Literature review
 
-1.2 Data description
+1.3 Data description
 The dataset is acquired from Kaggle: https://www.kaggle.com/datasets/uciml/default-of-credit-card-clients-dataset?resource=download
 
 This dataset contains information on default payments, demographic factors, history of repayment status, and bill statements of credit card clients in Taiwan from April 2005 to September 2005. It contains records of 30000 customers with 25 features. Below is a description of them:
 
 - ID: ID of each client
 - LIMIT_BAL: Amount of given credit in NT dollars (includes individual and family/supplementary credit)
-- SEX: Gender (1=male, 2=female)
-- EDUCATION: (0=others, 1=graduate school, 2=university, 3=high school, 4=others, 5=unknown, 6=unknown)
-- MARRIAGE: Marital status (0=others, 1=married, 2=single, 3=others)
+- SEX: Gender (1 = male, 2 = female)
+- EDUCATION: (0 = others, 1 = graduate school, 2 = university, 3 = high school, 4 = others, 5 = unknown, 6 = unknown)
+- MARRIAGE: Marital status (0 = others, 1 = married, 2 = single, 3 = others)
 - AGE: Age in years
 Scale of PAY_0, PAY_2, PAY_3, PAY_4, PAY_5, and PAY_6: -2 = no consumption, -1 = paid in full, 0 = use of revolving credit (paid minimum only), 1 = payment delay for one month, 2 = payment delay for two months, …, 8 = payment delay for eight months, 9 = payment delay for nine months and above
 - PAY_0: Repayment status in September, 2005 
@@ -51,7 +67,7 @@ All amount of bill statement are shown in New Taiwan dollar (NT dollar)
 - default.payment.next.month: Default payment (0 = no, 1 = yes)
 
 
-2. Exploratory Data Analysis
+# 2. Exploratory Data Analysis
 
 ```{r}
 ccard = read.csv("/Users/selina.wang/Desktop/Credit_card_default_prediction/UCI_Credit_Card.csv")
@@ -131,7 +147,7 @@ data <- ccard
 correlation_matrix <- cor(data)
 corrplot(correlation_matrix)
 ```
-As shown by the plot, the BILL_AMT variables are highly correlated. And, the closer the two months, the more correlated the payment status variables (i.e. PAY_2 and PAY_3). Therefore, in predictive analysis, we are going to use a new predictor to represent the BILL_AMT variables instead of including all of them in the model. Also, we're going to perform the tree models (classification trees, bagging, random forest, boosted trees) to identify the most importance payment status feature before performing logistic regression, LDA, and QDA.
+As shown by the plot, the BILL_AMT variables are highly correlated. And, the closer the two months, the more correlated the payment status variables (i.e. PAY_2 and PAY_3). Therefore, in predictive analysis, we are going to use a new predictor to represent the BILL_AMT variables instead of including all of them in the model.
 
 Explore the target variable default.payment.next.month
 ```{r}
@@ -140,7 +156,7 @@ barplot(freq, col = "steelblue", main = "Target Variable Distribution", ylim=c(0
 ```
 
 
-3. Feature Engineering
+# 3. Feature Engineering
 
 Rename the variables
 ```{r}
@@ -233,7 +249,7 @@ Perform clustering
 The following models are aimed at predicting the IsDefaulter variable using the rest of the variables in the dataset as predictors.
 
 
-4. Predictive Analysis
+# 4. Predictive Analysis
 
 Perform train-test split
 ```{r}
@@ -306,7 +322,7 @@ treeER
 
 
 4.5. Bagging
-# probably overfitted, use CV
+probably overfitted, use CV
 ```{r}
 # Tuning the hyperparameter ntree
 
@@ -314,25 +330,25 @@ library(randomForest)
 set.seed(1)
 
 testER = c()
-ntreeList = seq(250,500,50)
+ntreeList = seq(300,500,50)
 for (ntree in ntreeList) {
   bag.ccard = randomForest(IsDefaulter~., data = ccard.train, mtry = ncol(ccard.train)-1, ntree = ntree, importance=FALSE)
   bag.pred = predict(bag.ccard, ccard.test)
   print(mean(bag.pred != ccard.test$IsDefaulter))
   testER = append(testER, mean(bag.pred != ccard.test$IsDefaulter))
 }
-
-plot(ntreeList, testER)
+print(min(testER))
+#plot(ntreeList, testER)
 ```
 
 ```{r}
-bestntree = 400
-baggingER = testER[4] # hard coding?????????
+bestntree = 450
+baggingER = min(testER)
 ```
 
 
 4.6. Random Forest
-# probably overfitted, use CV
+probably overfitted, use CV
 
 Tune the hyperparameter mtry
 ```{r}
@@ -347,12 +363,13 @@ for (mtry in mtryList) {
   print(mean(rf.pred != ccard.test$IsDefaulter))
   testER = append(testER, mean(rf.pred != ccard.test$IsDefaulter))
 }
-plot(mtryList, testER)
+print(min(testER))
+#plot(mtryList, testER)
 ```
 
 ```{r}
 bestmtry = 4
-rfER = testER[3]
+rfER = min(testER)
 ```
 
 Tune the hyperparameter ntree
@@ -366,7 +383,8 @@ for (ntree in ntreeList) {
   print(mean(rf.pred != ccard.test$IsDefaulter))
   testER = append(testER, mean(rf.pred != ccard.test$IsDefaulter))
 }
-plot(ntreeList, testER)
+print(min(testER))
+#plot(ntreeList, testER)
 ```
 
 ```{r}
@@ -390,106 +408,100 @@ importance(rf.ccard)[sorted_indices, ]
 
 
 4.7. Boosted Trees
-```{r}
-# Tuning shrinkage
-library(gbm)
 
-set.seed(1)
-threshold = 0.5
-testER = c()
-shrinkageList = seq(0.05,0.30,0.05)
-for (shrinkage in shrinkageList) {
-  boost.ccard = gbm(IsDefaulter~., data = ccard.train, distribution = "bernoulli", n.trees = 10, interaction.depth=4, shrinkage = shrinkage)
-
-  boost.probs = predict(boost.ccard, newdata = ccard.test, n.trees = 10)
-  boost.pred = ifelse(boost.probs > threshold, 1, 0)
-  
-  table(boost.pred, ccard.test$IsDefaulter)
-  mean(boost.pred == ccard.test$IsDefaulter)
-}
-plot(ntreeList, testER)
-
-
-
-boost.ccard = gbm(IsDefaulter~., data = ccard.train, distribution = "bernoulli", n.trees=1000, interaction.depth=4, shrinkage = 0.1)
-
-boost.probs = predict(boost.ccard, newdata = ccard.test, n.trees = 1000)
-threshold = 0.5
-boost.pred = ifelse(boost.probs > threshold, 1, 0)
-
-table(boost.pred, ccard.test$IsDefaulter)
-mean(boost.pred == ccard.test$IsDefaulter)
-```
-
-```{r}
-# Tuning interaction.depth
-
-
-```
-
-
+Preprocessing the data
 ```{r}
 library(xgboost)
+set.seed(1)
 
-ccard.train <- lapply(ccard.train, function(x) if(is.factor(x)) as.numeric(x) else x)
+# Convert categorical variables to numerical values -- Ordinal encoding
+ccard3 = lapply(ccard2, function(x) { if(is.factor(x)) as.numeric(as.character(x)) else x})
+ccard3 = data.frame(ccard3)
 
-# Prepare the data
-x_train <- ccard.train[, -which(names(ccard.train) == "IsDefaulter")]
-x_train <- as.matrix(x_train)
+# One-hot encoding
+# library(fastDummies)
+# categorical_preds = c("SEX","EDUCATION","MARRIAGE","PAY_SEPT","PAY_AUG", "PAY_JUL", "PAY_JUN", "PAY_MAY", "PAY_APR")
+# ccard3 = dummy_cols(ccard2, select_columns = categorical_preds, remove_first_dummy = TRUE) # remove the first level dummy to avoid multicollinearity
+# ccard3 = ccard3[, !colnames(ccard3) %in% categorical_preds]
+# colnames(ccard3) = make.names(colnames(ccard3)) # make valid names
+
+# Recreate the train-test split
+ccard.train = ccard3[train,]
+ccard.test = ccard3[-train,]
+
+x_train = ccard.train[, -which(names(ccard.train) == "IsDefaulter"), drop = FALSE]
+x_train = as.matrix(sapply(x_train, as.numeric)) 
 y_train = ccard.train$IsDefaulter
-x_test <- ccard.test[, -which(names(ccard.test) == "IsDefaulter")]
-x_test <- as.matrix(x_test)
+dtrain = xgb.DMatrix(data = x_train, label = y_train)
+
+x_test = ccard.test[, -which(names(ccard.test) == "IsDefaulter"), drop = FALSE]
+x_test = as.matrix(sapply(x_test, as.numeric))
 y_test = ccard.test$IsDefaulter
-
-# Train the boosted tree model
-dtrain <- xgb.DMatrix(data = as.matrix(x_train), label = y_train)
-params <- list(objective = "binary:logistic")
-boost_model <- xgboost(params = params, data = dtrain, nrounds = 10)
-
-# Make predictions on the test dataset
-dtest = xgb.DMatrix(data = as.matrix(X_test))
-predictions <- predict(boost_model, newdata = dtest)
-
-# Convert predicted probabilities to class labels (0 or 1)
-predicted_labels <- ifelse(predictions > 0.5, 1, 0)
-
-# Evaluate the predictions (e.g., calculate accuracy)
-accuracy <- mean(predicted_labels == ccard.test$IsDefaulter)
-print(paste("Accuracy:", accuracy))
+dtest = xgb.DMatrix(data = x_test)
 ```
 
+Tuning shrinkage
+(library(caret) doesn't work on my device, so I did the tuning manually)
 ```{r}
-install.packages("catboost")
-library(catboost)
+# grid search with k-fold cross validation
+shrinkage = seq(from = 0.1, to = 0.5, by = 0.1)
 
-# Set parameters
-iterations <- 500
-learning_rate <- 0.02
-depth <- 12
-eval_metric <- "AUC"
-random_seed <- 42 # Assuming RANDOM_STATE is defined as 42
-bagging_temperature <- 0.2
-od_type <- "Iter"
-metric_period <- 1 # Assuming VERBOSE_EVAL is defined as 1
-od_wait <- 100
-
-# Create CatBoost classifier object
-clf <- catboost.train(
-  data = as.matrix(train_df[, predictors]), 
-  label = train_df[, target], 
-  verbose = TRUE,
-  iterations = iterations,
-  learning_rate = learning_rate,
-  depth = depth,
-  eval_metric = eval_metric,
-  bagging_temperature = bagging_temperature,
-  od_type = od_type,
-  metric_period = metric_period,
-  od_wait = od_wait,
-  verbose_eval = TRUE
-)
+best_ER <- 1
+best_eta <- NULL
+for (eta in shrinkage) {
+  set.seed(1)
+  cv <- xgb.cv(
+    data = dtrain,
+    eta = eta, #
+    objective = "binary:logistic",
+    nfold = 5,
+    metrics = "error",
+    nrounds = 10,
+    early_stopping_rounds = 10,
+    verbose = FALSE
+  )
+      
+  mean_ER = cv$evaluation_log$test_error_mean[length(cv$evaluation_log$test_error_mean)]
+  if (mean_ER < best_ER) {
+      best_ER = mean_ER
+      best_eta = eta
+  }
+}
+best_ER
+best_eta
 ```
 
+Tuning nrounds*
+```{r}
+ntreeList = seq(from = 4, to = 12, by = 2)
+
+best_ER <- 1
+best_ntree <- NULL
+for (ntree in ntreeList) {
+  set.seed(1)
+  cv <- xgb.cv(
+    data = dtrain,
+    eta = best_eta,
+    max_depth = best_maxDepth,
+    nrounds = ntree,
+    objective = "binary:logistic",
+    nfold = 5,
+    metrics = "error",
+    early_stopping_rounds = 10,
+    verbose = FALSE
+  )
+      
+  mean_ER = cv$evaluation_log$test_error_mean[length(cv$evaluation_log$test_error_mean)]
+  if (mean_ER < best_ER) {
+      best_ER = mean_ER
+      best_ntree = ntree
+  }
+}
+best_ER
+best_ntree
+
+boostER = best_ER
+```
 
 
 4.8. Neural Network 
@@ -508,7 +520,7 @@ ccard3[which(colnames(ccard3) == "SEX_1"):ncol(ccard3)] = lapply(ccard3[which(co
 str(ccard3)
 ```
 
-Pre-processing the dataset
+Preprocessing the dataset
 ```{r}
 #remove.packages("caret")
 #remove.packages("timechange")
@@ -550,18 +562,51 @@ mean(nn.pred == ccard.test$IsDefaulter)
 ```
 
 
-5. Model Evaluations
+# 5. Model Evaluations
 
 ```{r}
 # need Boosted tree and Neural network
-models = c("Logistic Regression", "LDA", "QDA", "Tree", "Bagging", "Random Forest")
-errorRates = c(logiER, ldaER, qdaER, treeER, baggingER, rfER)
+models = c("Logistic Regression", "LDA", "QDA", "Tree", "Bagging", "Random Forest", "Boosted Trees")
+errorRates = c(logiER, ldaER, qdaER, treeER, baggingER, rfER, boostER)
 barplot(errorRates, names.arg = models, col = "steelblue", main = "Error Rates (log) by Model",
         xlab = "Model", ylab = "Error Rate (log)", log = "y", las=3)
 
 errorRates
 ```
 
-6. Conclusion
+# 6. Conclusion
 
+hkgjyhfgcxd
+
+
+# Appendix
+7.1 Tuning the hyperparater max_depth for xgboost model, which yields the same value with the default
+```{r}
+max_depths = c(2,4,6,8)
+
+best_ER <- 1
+best_maxDepth <- NULL
+for (max_depth in max_depths) {
+  set.seed(1)
+  cv <- xgb.cv(
+    data = dtrain,
+    eta = best_eta,
+    max_depth = max_depth,
+    nrounds = 10,
+    objective = "binary:logistic",
+    nfold = 5,
+    metrics = "error",
+    early_stopping_rounds = 10,
+    verbose = FALSE
+  )
+      
+  mean_ER = cv$evaluation_log$test_error_mean[length(cv$evaluation_log$test_error_mean)]
+  if (mean_ER < best_ER) {
+      best_ER = mean_ER
+      best_maxDepth = max_depth
+  }
+}
+best_ER
+best_maxDepth # same with default
+```
 
