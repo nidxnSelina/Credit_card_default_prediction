@@ -7,14 +7,30 @@ output: html_notebook
 Feb.13th 2024
 Chenbo Huang, Jiayi Wu, Selina Wang, Yiting Hu, Ziao Xiong
 
+Content:
+1. Introduction
+  1.1 Problem description
+  1.2 Data description
+2. Exploratory Data Analysis
+3. Feature Engineering
+4. Predictive Analysis
+  4.1. Logistic Regression
+  4.2. LDA
+  4.3. QDA
+  4.4. Classification Tree
+  4.5. Bagging
+  4.6. Random Forest
+  4.7. Boosted Trees
+  4.8. Neural Network 
+5. Model Evaluation
+6. Conclusion
+
 # 1. Introduction
 
 1.1 Problem description
 Predicting whether a client will default on their credit card payment has been a significant part of risk assessment for credit card companies. In our project, we used 8 models to predict the case of default based on a collection of demographic, repayment status and amount records of clients in Taiwan from April to September 2005.
 
-1.2 Literature review
-
-1.3 Data description
+1.2 Data description
 The dataset is acquired from Kaggle: https://www.kaggle.com/datasets/uciml/default-of-credit-card-clients-dataset?resource=download
 
 This dataset contains information on default payments, demographic factors, history of repayment status, and bill statements of credit card clients in Taiwan from April 2005 to September 2005. It contains records of 30000 customers with 25 features. Below is a description of them:
@@ -557,7 +573,13 @@ errorRates
 
 # 6. Conclusion
 
-hkgjyhfgcxd
+While most models yields similar precision in predicting the case of default, Logistic regression, LDA, and tree yield the best performance
+- The relationship between our listed predictors and target are simple and can be easily interpreted
+- Decision boundary between defaulter and non-defaulters is close to linear
+
+Significant predictors: Repayment amount and status of September, Average amount of bill statement, Age, Limit credit
+- More recent repayment information exhibit greater predictive efficacy. Information collected from consecutive months are highly correlated.
+- Clients who didn’t pay duly usually paid 2 months late; very few of them paid only one month late
 
 
 # Appendix
