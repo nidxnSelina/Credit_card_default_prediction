@@ -7,6 +7,7 @@ Predicting whether a client will default on their credit card payment has been a
 Content:
 
 1. Introduction
+
   1.1 Problem description
   1.2 Literature review
   1.3 Data description
