@@ -2,7 +2,6 @@
 title: "Credit card default prediction"
 output: html_notebook
 ---
-
 # Project: Credit Card Default Prediction
 Feb.13th 2024
 Chenbo Huang, Jiayi Wu, Selina Wang, Yiting Hu, Ziao Xiong

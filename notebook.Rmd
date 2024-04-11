@@ -6,7 +6,6 @@ output: html_notebook
 Feb.13th 2024
 Chenbo Huang, Jiayi Wu, Selina Wang, Yiting Hu, Ziao Xiong
 
-
 # 1. Introduction
 
 1.1 Problem description
