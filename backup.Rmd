@@ -1,11 +1,29 @@
 ---
-title: "Project: Credit card default prediction"
+title: "Credit card default prediction"
 output: html_notebook
 ---
 
+# Project: Credit Card Default Prediction
 Feb.13th 2024
 Chenbo Huang, Jiayi Wu, Selina Wang, Yiting Hu, Ziao Xiong
 
+Content:
+1. Introduction
+  1.1 Problem description
+  1.2 Data description
+2. Exploratory Data Analysis
+3. Feature Engineering
+4. Predictive Analysis
+  4.1. Logistic Regression
+  4.2. LDA
+  4.3. QDA
+  4.4. Classification Tree
+  4.5. Bagging
+  4.6. Random Forest
+  4.7. Boosted Trees
+  4.8. Neural Network 
+5. Model Evaluation
+6. Conclusion
 
 # 1. Introduction
 
@@ -220,6 +238,13 @@ ccard2 = ccard1[valid_rows,]
 dim(ccard2)
 ```
 
+Perform clustering
+```{r}
+
+```
+
+The following models are aimed at predicting the IsDefaulter variable using the rest of the variables in the dataset as predictors.
+
 
 # 4. Predictive Analysis
 
@@ -325,7 +350,7 @@ mtryList = seq(2,6,1)
 for (mtry in mtryList) {
   rf.ccard = randomForest(IsDefaulter~., data = ccard.train, mtry = mtry, ntree = bestntree, importance=FALSE)
   rf.pred = predict(rf.ccard, ccard.test)
-  #print(mean(rf.pred != ccard.test$IsDefaulter))
+  print(mean(rf.pred != ccard.test$IsDefaulter))
   testER = append(testER, mean(rf.pred != ccard.test$IsDefaulter))
 }
 print(min(testER))
@@ -345,7 +370,7 @@ ntreeList = seq(250,500,50)
 for (ntree in ntreeList) {
   rf.ccard = randomForest(IsDefaulter~., data = ccard.train, mtry = bestmtry, ntree = ntree, importance=FALSE)
   rf.pred = predict(rf.ccard, ccard.test)
-  #print(mean(rf.pred != ccard.test$IsDefaulter))
+  print(mean(rf.pred != ccard.test$IsDefaulter))
   testER = append(testER, mean(rf.pred != ccard.test$IsDefaulter))
 }
 print(min(testER))
@@ -435,6 +460,36 @@ best_ER
 best_eta
 ```
 
+Tuning the hyperparater max_depth using Grid search
+```{r}
+max_depths = c(2,4,6,8)
+
+best_ER <- 1
+best_maxDepth <- NULL
+for (max_depth in max_depths) {
+  set.seed(1)
+  cv <- xgb.cv(
+    data = dtrain,
+    eta = best_eta,
+    max_depth = max_depth,
+    nrounds = 10,
+    objective = "binary:logistic",
+    nfold = 5,
+    metrics = "error",
+    early_stopping_rounds = 10,
+    verbose = FALSE
+  )
+      
+  mean_ER = cv$evaluation_log$test_error_mean[length(cv$evaluation_log$test_error_mean)]
+  if (mean_ER < best_ER) {
+      best_ER = mean_ER
+      best_maxDepth = max_depth
+  }
+}
+best_ER
+best_maxDepth # same with default
+```
+
 Tuning nrounds*
 ```{r}
 ntreeList = seq(from = 4, to = 12, by = 2)
@@ -446,6 +501,7 @@ for (ntree in ntreeList) {
   cv <- xgb.cv(
     data = dtrain,
     eta = best_eta,
+    max_depth = best_maxDepth,
     nrounds = ntree,
     objective = "binary:logistic",
     nfold = 5,
@@ -467,6 +523,99 @@ boostER = best_ER
 ```
 
 
+4.8. Neural Network 
+
+One-hot encoding categorical variables
+```{r}
+library(fastDummies)
+
+ccard3 = ccard2
+categorical_preds <- c("SEX","EDUCATION","MARRIAGE","PAY_SEPT","PAY_AUG", "PAY_JUL", "PAY_JUN", "PAY_MAY", "PAY_APR")
+ccard3 = dummy_cols(ccard2, select_columns = categorical_preds)
+ccard3 = ccard3[, !colnames(ccard3) %in% categorical_preds]
+colnames(ccard3) = make.names(colnames(ccard3)) # make valid names
+ccard3[which(colnames(ccard3) == "SEX_1"):ncol(ccard3)] = lapply(ccard3[which(colnames(ccard3) == "SEX_1"):ncol(ccard3)], as.factor) # convert dummies to factor
+
+str(ccard3)
+```
+
+Preprocessing the dataset
+```{r}
+#remove.packages("caret")
+#remove.packages("timechange")
+#install.packages("timechange")
+#install.packages("caret", dependencies = TRUE)
+library(caret)
+
+#str(ccard3)
+
+new_ccard <- preProcess(ccard3, method = "range", rangeBounds = c(0,1))
+str(new_ccard)
+
+```
+
+Perform train-test split
+```{r}
+set.seed(1)
+
+train = sample(nrow(ccard3), nrow(ccard3)*0.7, replace = FALSE)
+ccard.train = ccard3[train,]
+ccard.test = ccard3[-train,]
+```
+
+
+```{r}
+library(neuralnet)
+
+nn.ccard = neuralnet(IsDefaulter~., data = ccard.train, linear.output = F, hidden = 5)
+# build a neural network model, linear.output = F: classification model
+# hidden = c(4,3): 2 hidden layers with 4 nodes and 3 nodes
+
+summary(nn.ccard)
+plot(nn.ccard, rep="best")
+# display the neural networks
+
+nn.pred = predict(nn.ccard, ccard.test)
+
+mean(nn.pred == ccard.test$IsDefaulter)
+```
+
+
+```{r}
+library(fastDummies)
+categorical_preds <- c("SEX","EDUCATION","MARRIAGE","PAY_SEPT","PAY_AUG", "PAY_JUL", "PAY_JUN", "PAY_MAY", "PAY_APR")
+ccard4<- dummy_cols(ccard2, select_columns = categorical_preds, remove_first_dummy = TRUE)
+
+#Delete these redundant variables after one hot coding
+ccard4$SEX <- NULL
+ccard4$EDUCATION <- NULL
+ccard4$MARRIAGE <- NULL
+ccard4$PAY_SEPT <- NULL
+ccard4$PAY_AUG <- NULL
+ccard4$PAY_JUL <- NULL
+ccard4$PAY_JUN <- NULL
+ccard4$PAY_MAY <- NULL
+ccard4$PAY_APR <- NULL
+#Turn Y variable into numerical format
+ccard4$IsDefaulter <- as.numeric(ccard4$IsDefaulter)-1 
+##Neural network
+library(neuralnet)
+names(ccard4) <- gsub("-", "_", names(ccard4))  # The "-" in column names will cause additional problems in model fitting, thus we need to rename them.
+
+train = sample(nrow(ccard4), nrow(ccard4)*0.7, replace = FALSE)
+ccard.train = ccard4[train,]
+ccard.test = ccard4[-train,]
+
+nn.ccard = neuralnet(IsDefaulter~.,data=ccard.train ,linear.output=F, hidden=c(3))
+
+nn.pred = predict(nn.ccard,newdata= ccard.test)
+
+nn.pred.class <- ifelse(nn.pred > 0.5, 1, 0)   #The Original prediction output is probability rather than categories, therefore we need to turn nn.pred into classes  
+accuracy <- mean(nn.pred.class == ccard.test$IsDefaulter)
+neuralER = 1 - accuracy
+```
+
+
 # 5. Model Evaluations
 
 ```{r}
@@ -481,9 +630,12 @@ errorRates
 
 # 6. Conclusion
 
-While most models demonstrate similar precision in predicting default cases, Logistic Regression, LDA, and decision trees outperform the others. The relationship between our listed predictors and the target is straightforward and easily interpretable, with the decision boundary between defaulters and non-defaulters being close to linear. 
+While most models yields similar precision in predicting the case of default, Logistic regression, LDA, and tree yield the best performance
+- The relationship between our listed predictors and target are simple and can be easily interpreted
+- Decision boundary between defaulter and non-defaulters is close to linear
 
-The most significant predictors include the repayment amount and status from September, the average amount of the bill statement, age, and credit limit. Recent repayment information proves to be more predictive, with data from consecutive months showing high correlation. Moreover, clients who didn't pay on time usually made payments two months late, while only a small number paid just one month late.
-
+Significant predictors: Repayment amount and status of September, Average amount of bill statement, Age, Limit credit
+- More recent repayment information exhibit greater predictive efficacy. Information collected from consecutive months are highly correlated.
+- Clients who didn’t pay duly usually paid 2 months late; very few of them paid only one month late
 
 
